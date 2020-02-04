@@ -1,7 +1,7 @@
 Parameters:
   SSHKey:
     Type: String
-    Default: demo-key
+    Default: ncaliforniakey
 
 Mappings:
   RegionMap:
@@ -165,6 +165,7 @@ Resources:
       Path: '/'
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/CloudWatchAgentAdminPolicy
+        - arn:aws:iam::aws:policy/AmazonEC2RoleforSSM
       RoleName: ASGRole
 
   ASGSG:
