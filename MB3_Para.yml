@@ -1,0 +1,40 @@
+- ParameterKey: pSSHKey
+  ParameterValue: 
+- ParameterKey: pASGRoleName
+  ParameterValue: DaksEC2Role
+- ParameterKey: pEnvironmentName
+  ParameterValue: DaksProd
+- ParameterKey: pInternetGatewayName
+  ParameterValue: DaksIGW
+- ParameterKey: pLoadBalancerName
+  ParameterValue: DaksELB
+- ParameterKey: pTargetGroupName
+  ParameterValue: DaksTG
+- ParameterKey: pBastionASGLaunchConfigurationName
+  ParameterValue: DaksBastionLC
+- ParameterKey: pAppASGLaunchConfigurationName
+  ParameterValue: DaksAppLC
+- ParameterKey: pS3BucketName
+  ParameterValue: daksbucket2020
+- ParameterKey: pVpcCIDR
+  ParameterValue: 10.190.0.0/16
+- ParameterKey: pPublicSubnet1CIDR
+  ParameterValue: 10.190.10.0/24
+- ParameterKey: pPublicSubnet2CIDR
+  ParameterValue: 10.190.11.0/24
+- ParameterKey: pPrivateSubnet1CIDR
+  ParameterValue: 10.190.20.0/24
+- ParameterKey: pPrivateSubnet2CIDR
+  ParameterValue: 10.190.21.0/24
+- ParameterKey: pPrivateSubnet3CIDR
+  ParameterValue: 10.190.30.0/24
+- ParameterKey: pPrivateSubnet4CIDR
+  ParameterValue: 10.190.31.0/24
+- ParameterKey: pDBUser
+  ParameterValue: admin
+- ParameterKey: pDBPassword
+  ParameterValue: Susane85
+- ParameterKey: pDBName
+  ParameterValue: DaksAuroraCluster
+- ParameterKey:
+  ParameterValue: 
