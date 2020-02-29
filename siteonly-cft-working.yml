@@ -624,7 +624,7 @@ Resources:
 
           - #PROVISIONER_TIER=frontend
 
-          - #PROVISIONER_PEER_ADDRESS=${rDatabaseCluster}${Endpoint.Address}
+          - #PROVISIONER_PEER_ADDRESS=${rDatabaseCluster}${!GetAtt Endpoint.Address}
 
           - #PROVISIONER_APP_PASSWORD=${pApplicationPassword}
 
