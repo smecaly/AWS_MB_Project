@@ -9,9 +9,9 @@ Description: >-
   AZ), and default routes for them in the private subnets.
 Parameters:
   pKeyPair:
-    Type: String
-    Description: Enter the name of an already existing key pair.
-    Default: nvirginiaawskey
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Enter the name of an already existing key pair. 
+    Default: nvirginiaskangnohkey
   pVPCName:
     Type: String
     Description: Enter the name of the VPC you will be creating
@@ -19,7 +19,7 @@ Parameters:
   pCertificateArn:
     Type: String
     Description: Enter Arn of the certificate at hand
-    Default: arn:aws:acm:us-east-1:639694136535:certificate/d655fe71-4340-4cc2-9b9d-f10b60e88e52
+    Default: arn:aws:acm:us-east-1:171602812093:certificate/0e4b6f74-17dd-4660-b0c5-0fc2b0d21635
   pInstanceType:
     Type: String
     Description: Enter an instance type for your EC2 instance. 
@@ -47,19 +47,19 @@ Parameters:
   pBlacklistIPset:
     Description: Enter the IP address set for the blacklist rule
     Type: String
-    Default: 192.168.1.226/32
+    Default: 65.127.78.58/32
   pLoadBalancerName:
     Description: Enter the name of the Loadbalancer
     Type: String
     Default: DaksELB
   pTargetGroupName:
-    Description: Enter the name for the Targetgroup
+    Description: Enter a name for the Targetgroup
     Type: String
     Default: DaksTG
   pASGLaunchConfigurationName:
-    Description: Enter the name for the Launch configuration
+    Description: Enter a name for the Launch configuration 
     Type: String
-    Default: SDaksLC
+    Default: DaksLC
   pVpcCIDR:
     Description: Please enter the IP range (CIDR notation) for this VPC
     Type: String
@@ -103,11 +103,15 @@ Parameters:
   pDomainName:
     Type: String
     Description: Enter domain name for Public hosted zone
-    Default: ryancerrato.us
+    Default: skangnohgroup.net
   pSubDomainName:
     Type: String
     Description: Enter sub domain name for record set
-    Default: ryancerrato.us
+    Default: skangnohgroup.net
+  pPublicHostedZoneId:
+    Type: AWS::Route53::HostedZone::Id
+    Description: Enter an Amazon Route 53 hosted zone ID, such as Z23YXV4OVPL04A.
+    Default: Z2HD1W4WRM2U3P
   pIPRangeSSH:
     Description: >-
       [Required] Set the IP or IP range for SSH connectivity to machine ;
@@ -539,7 +543,7 @@ Resources:
   rTargetGroup: # Creates a target group for the application load balancer
     Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
     Properties:
-      HealthCheckIntervalSeconds: 30
+      HealthCheckIntervalSeconds: 100
       HealthCheckProtocol: HTTPS
       HealthCheckTimeoutSeconds: 15
       HealthyThresholdCount: 5
@@ -579,7 +583,7 @@ Resources:
       LoadBalancerArn: !Ref rLoadBalancer
       Port: 443
       Protocol: HTTPS
-  rASGLaunchConfiguration: #Create launch configuration for application ASG
+  rASGLaunchConfiguration: #Create launch configuration for application ASGS
     Type: 'AWS::AutoScaling::LaunchConfiguration'
     DependsOn:
       - rDatabaseInstance
@@ -602,7 +606,7 @@ Resources:
       SecurityGroups:
         - !Ref rAppSG
         - !Ref rSharedSecurityGroup
-      UserData: !Base64
+      UserData: !Base64 
         Fn::Join:
           - ''
           - - |
@@ -612,8 +616,10 @@ Resources:
               #PROVISIONER_PEER_PASSWORD_INPUT=
             - !Ref 'AWS::AccountId'
             - ' '
+
             - !Ref 'AWS::StackId'
             - ' '
+            
             - !Ref 'AWS::Region'
             - |-
 
@@ -629,18 +635,18 @@ Resources:
             - !Ref 'AWS::Region'
             - |-
 
-              # PROVISIONER_CFN_RESOURCE=Machine
+              #PROVISIONER_CFN_RESOURCE=Machine
             - |-
 
-              # PROVISIONER_CFN_STACK=
+              #PROVISIONER_CFN_STACK=
             - !Ref 'AWS::StackName'
             - |-
 
-              # PROVISIONER_CFN_REGION=
+              #PROVISIONER_CFN_REGION=
             - !Ref 'AWS::Region'
             - |-
 
-              # PROVISIONER_DATA_DISK=/dev/xvdc
+              #PROVISIONER_DATA_DISK=/dev/xvdc
             - |-
 
               #PROVISIONER_TIER=frontend
@@ -654,128 +660,52 @@ Resources:
 
               #PROVISIONER_APP_PASSWORD=
             - !Ref pApplicationPassword
-         
-
-            - apt-get -Uvh https://s3.amazonaws.com/amazoncloudwatch-agent/debian/amd64/latest/amazon-cloudwatch-agent.deb
-
-            - sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
-            - sudo apt-get update && sudo apt-get install collectd -y
-
-            - !Sub /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource ASGLaunchConfiguration --region ${AWS::Region} --configsets default
-
-            - !Sub /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource ASGLaunchConfiguration --region ${AWS::Region}
-
-        
-    Metadata:
-      'AWS::CloudFormation::Init':
-        configSets:
-          # These scripts will run during the instance launch triggered by the userData
-          default:
-            - 01_setupCfnHup
-            - 02_config-amazon-cloudwatch-agent
-            - 03_restart_amazon-cloudwatch-agent
-          UpdateEnvironment:
-            - 02_config-amazon-cloudwatch-agent
-            - 03_restart_amazon-cloudwatch-agent
-
-        # Definition of json configuration of AmazonCloudWatchAgent
-        02_config-amazon-cloudwatch-agent:
-          files:
-            /opt/aws/amazon-cloudwatch-agent/bin/config.json:
-              content: !Sub |
-                {
-                  "agent": {
-                      "metrics_collection_interval": 60,
-                      "run_as_user": "root"   
+            
+            - |-
+            
+            - cat <<EOT > /tmp/config.json
+            {
+              "agent": {
+                  "metrics_collection_interval": 60,
+                  "run_as_user": "root"   
+              },
+              "metrics": {
+                "append_dimensions": {
+                  "AutoScalingGroupName": "\${!aws:AutoScalingGroupName}",
+                  "ImageId": "\${!aws:ImageId}",
+                  "InstanceId": "\${!aws:InstanceId}",
+                  "InstanceType": "\${!aws:InstanceType}"
+                },
+                "metrics_collected": {
+                  "collectd": {
+                    "metrics_aggregation_interval": 60
                   },
-                  "metrics": {
-                    "append_dimensions": {
-                      "AutoScalingGroupName": "${!aws:AutoScalingGroupName}",
-                      "ImageId": "${!aws:ImageId}",
-                      "InstanceId": "${!aws:InstanceId}",
-                      "InstanceType": "${!aws:InstanceType}"
-                    },
-                    "metrics_collected": {
-                      "collectd": {
-                        "metrics_aggregation_interval": 60
-                      },
-                      "disk": {
-                        "measurement":[
-                          "used_percent"
-                        ],
-                        "metrics_collection_interval": 60,
-                        "resources": [
-                          "*"
-                        ]
-                      },
-                      "mem": {
-                        "measurement":[
-                          "mem_used_percent"
-                        ],
-                        "metrics_collection_interval": 60
-                      },
-                    }
+                  "disk": {
+                    "measurement":[
+                      "used_percent"
+                    ],
+                    "metrics_collection_interval": 60,
+                    "resources": [
+                      "*"
+                    ]
+                  },
+                  "mem": {
+                    "measurement":[
+                      "mem_used_percent"
+                    ],
+                    "metrics_collection_interval": 60
                   }
                 }
-        03_restart_amazon-cloudwatch-agent:
-          commands:
-            01_stop_service:
-              command: >-
-                /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl
-                -a stop
-            02_start_service:
-              command: >-
-                /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl
-                -a fetch-config -m ec2 -c
-                file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
-                -s
-        01_setupCfnHup:
-          files:
-            /etc/cfn/cfn-hup.conf:
-              content: !Sub |
-                [main]
-                stack=${AWS::StackId}
-                region=${AWS::Region}
-                interval=1
-              mode: '000400'
-              owner: root
-              group: root
-            /etc/cfn/hooks.d/amazon-cloudwatch-agent-auto-reloader.conf:
-              content: !Sub >
-                [cfn-auto-reloader-hook]
+              }
+            }     
+            EOT
 
-                triggers=post.update
+            wget -Uvh https://s3.amazonaws.com/amazoncloudwatch-agent/debian/amd64/latest/amazon-cloudwatch-agent.deb
+            sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
+            sudo apt-get install collectd -y
+            sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/tmp/config.json -s
 
-                path=Resources.ASGLaunchConfiguration.Metadata.AWS::CloudFormation::Init.02_config-amazon-cloudwatch-agent
-
-                action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackId}
-                --resource ASGLaunchConfiguration --region ${AWS::Region}
-                --configsets UpdateEnvironment
-
-                runas=root
-              mode: '000400'
-              owner: root
-              group: root
-            /lib/systemd/system/cfn-hup.service:
-              content: |
-                [Unit]
-                Description=cfn-hup daemon
-                [Service]
-                Type=simple
-                ExecStart=/opt/aws/bin/cfn-hup
-                Restart=always
-                [Install]
-                WantedBy=multi-user.target
-          commands:
-            01enable_cfn_hup:
-              command: |
-                systemctl enable cfn-hup.service
-            02start_cfn_hup:
-              command: |
-                systemctl start cfn-hup.service
-      'AWS::CloudFormation::Designer':
-        id: 8ea5a632-01f2-4008-9a44-a66949888711
-  rASGInstanceProfile: #Creates an instance profile for the launch configuration
+  rASGInstanceProfile: # Creates an instance profile for the launch configuration
     Type: 'AWS::IAM::InstanceProfile'
     Properties:
       InstanceProfileName: !Sub '${rASGRole}-profile'
@@ -881,7 +811,7 @@ Resources:
               command: >-
                 /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl
                 -a fetch-config -m ec2 -c
-                file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+                file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
                 -s
         01_setupCfnHup:
           files:
@@ -982,6 +912,7 @@ Resources:
         - 'Fn::GetAtt':
             - rPrivateSubnet2
             - AvailabilityZone
+      DesiredCapacity: '2'
       LaunchConfigurationName:
         Ref: rASGLaunchConfiguration
       VPCZoneIdentifier:
@@ -1034,13 +965,14 @@ Resources:
       AutoScalingGroupName: !Ref rAppASG
       Cooldown: '1'
       ScalingAdjustment: 1
-  rScaleDownPolicy: # Creates a simple scaleDown policy
+  rScaleDownPolicy: # Creates a simple scaleUp policy
     Type: 'AWS::AutoScaling::ScalingPolicy'
     Properties:
       AdjustmentType: ChangeInCapacity
       AutoScalingGroupName: !Ref rAppASG
       Cooldown: '1'
       ScalingAdjustment: -1
+
   rSharedSecurityGroup:  # Create security group for internal communication
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -1082,6 +1014,9 @@ Resources:
             ToPort: 443
             CidrIp: !Ref pIPRangeApplication
           - 'AWS::NoValue'
+      Tags:
+        - Key: Name
+          Value: !Sub '${pEnvironmentName} FrontendSG'
       VpcId: !Ref rVPC
   rDatabaseSecurityGroup: # Security group for Aurora DB cluster 
     Type: 'AWS::EC2::SecurityGroup'
@@ -1096,7 +1031,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${pEnvironmentName} Database SG'
-     
+  
   rDatabaseSubnetGroup: # Creates a subnetgroup to associate with AuroraDB cluster
     Type: 'AWS::RDS::DBSubnetGroup'
     Properties:
@@ -1166,7 +1101,8 @@ Resources:
       Tags:
         - Value: wordpress-database-replica
           Key: Name
- 
+
+  
 Outputs:
   VPC:
     Description: A reference to the created VPC
@@ -1195,16 +1131,5 @@ Outputs:
   PrivateSubnet2:
     Description: A reference to the private subnet in the 2nd Availability Zone
     Value: !Ref rPrivateSubnet2
-
-
-
-
-
-            - |-
-            
-              apt-get -Uvh https://s3.amazonaws.com/amazoncloudwatch-agent/debian/amd64/latest/amazon-cloudwatch-agent.deb
-              sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
-              sudo apt-get update && sudo apt-get install collectd -y
-              sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json -s
-
- 
+  
+  

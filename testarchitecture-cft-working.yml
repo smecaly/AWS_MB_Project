@@ -7,6 +7,60 @@ Description: >-
   across two Availability Zones. It deploys an internet gateway, with a default
   route on the public subnets. It deploys a pair of NAT gateways (one in each
   AZ), and default routes for them in the private subnets.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Networking set up
+      Parameters:
+      - pDomainName
+      - pSubDomainName
+      - pEnvironmentName
+      - pPublicHostedZoneId
+      - pVPCName
+      - pVpcCIDR
+      - pInternetGatewayName
+      - pAvailabilityZone
+      - pSecondAvailabilityZone
+      - pPrivateSubnet1CIDR
+      - pPrivateSubnet2CIDR
+      - pPrivateSubnet3CIDR
+      - pPrivateSubnet4CIDR
+      - pPublicSubnet1CIDR
+      - pPublicSubnet2CIDR 
+    - Label:
+        default: Compute set up
+      Parameters:
+      - pApplicationPassword
+      - pApplicationUsername
+      - pASGLaunchConfigurationName
+      - pASGRoleName
+      - pBastionASGLaunchConfigurationName
+      - pInstancesDataDiskSize
+      - pInstancesDataDiskType
+      - pInstanceType
+      - pIPRangeApplication
+      - pIPRangeSSH
+      - pKeyPair
+      - pLoadBalancerName
+      - pTargetGroupName
+    - Label:
+        default: Storage set up
+      Parameters:
+      - pDatabaseInstanceClass
+      - pDatabasePassword
+      - pMultiAZ
+    - Label:
+        default: Security set up
+      Parameters:
+      - pActivateBadBotProtectionParam
+      - pActivateCrossSiteScriptingProtectionParam
+      - pActivateReputationListsProtectionParam
+      - pActivateSqlInjectionProtectionParam
+      - pBlacklistIPset
+      - pCertificateArn
+
 Parameters:
   pKeyPair:
     Type: AWS::EC2::KeyPair::KeyName
@@ -15,7 +69,7 @@ Parameters:
   pVPCName:
     Type: String
     Description: Enter the name of the VPC you will be creating
-    Default: DaksVPC
+    Default: DaksVPCs
   pCertificateArn:
     Type: String
     Description: Enter Arn of the certificate at hand
@@ -35,15 +89,15 @@ Parameters:
   pEnvironmentName:
     Type: String
     Description: An environment name that is prefixed to resource names
-    Default: DaksProd
+    Default: DaksProds
   pASGRoleName:
     Type: String
     Description: Enter the name for the IAM role name for instances
-    Default: DaksIAMRole
+    Default: DaksIAMRoles
   pInternetGatewayName:
     Description: An environment name that is prefixed to resource names
     Type: String
-    Default: DaksIGW
+    Default: DaksIGWs
   pBlacklistIPset:
     Description: Enter the IP address set for the blacklist rule
     Type: String
@@ -51,15 +105,15 @@ Parameters:
   pLoadBalancerName:
     Description: Enter the name of the Loadbalancer
     Type: String
-    Default: DaksELB
+    Default: DaksELBs
   pTargetGroupName:
     Description: Enter a name for the Targetgroup
     Type: String
-    Default: DaksTG
+    Default: DaksTGs
   pASGLaunchConfigurationName:
     Description: Enter a name for the Launch configuration 
     Type: String
-    Default: DaksLC
+    Default: DaksLCs
   pVpcCIDR:
     Description: Please enter the IP range (CIDR notation) for this VPC
     Type: String
@@ -251,35 +305,35 @@ Parameters:
     Default: DaksBastionLC
   
 Conditions:
-  SqlInjectionProtectionActivated: !Equals
+  cSqlInjectionProtectionActivated: !Equals
     - !Ref pActivateSqlInjectionProtectionParam
     - 'yes'
-  CrossSiteScriptingProtectionActivated: !Equals
+  cCrossSiteScriptingProtectionActivated: !Equals
     - !Ref pActivateCrossSiteScriptingProtectionParam
     - 'yes'
-  AlwaysTrue: !Equals 
+  cAlwaysTrue: !Equals 
     - true
     - true
-  AddIPRangeSSH: !Not 
+  cAddIPRangeSSH: !Not 
     - !Equals 
       - !Ref pIPRangeSSH
       - ''
-  AddIPRangeApplication: !Not 
+  cAddIPRangeApplication: !Not 
     - !Equals 
       - !Ref pIPRangeApplication
       - ''
-  AuroraMultiAZ: !Equals 
+  cAuroraMultiAZ: !Equals 
     - !Ref pMultiAZ
     - 'true'
-  ReputationListsProtectionActivated: !Equals
+  cReputationListsProtectionActivated: !Equals
     - !Ref pActivateReputationListsProtectionParam
     - 'yes'
-  BadBotProtectionActivated: !Equals
+  cBadBotProtectionActivated: !Equals
     - !Ref pActivateBadBotProtectionParam
     - 'yes'
     
 Mappings:
-  RegionMap:
+  mRegionMap:
     us-east-1:
       AMI: ami-00e692dfc46181328
     us-east-2:
@@ -503,21 +557,21 @@ Resources:
       GroupDescription: ELB security group for port 80 and 443
       SecurityGroupIngress:
         - !If 
-          - AddIPRangeSSH
+          - cAddIPRangeSSH
           - IpProtocol: tcp
             FromPort: 22
             ToPort: 22
             SourceSecurityGroupId: !Ref rBastionASGSG
           - 'AWS::NoValue'
         - !If 
-          - AddIPRangeApplication
+          - cAddIPRangeApplication
           - IpProtocol: tcp
             FromPort: 80
             ToPort: 80
             SourceSecurityGroupId: !Ref rFrontendSecurityGroup
           - 'AWS::NoValue'
         - !If 
-          - AddIPRangeApplication
+          - cAddIPRangeApplication
           - IpProtocol: tcp
             FromPort: 443
             ToPort: 443
@@ -591,7 +645,7 @@ Resources:
     Properties:
       AssociatePublicIpAddress: 'false'
       ImageId: !FindInMap 
-        - RegionMap
+        - mRegionMap
         - !Ref 'AWS::Region'
         - AMI
       InstanceType: !Ref pInstanceType
@@ -791,7 +845,7 @@ Resources:
     Type: 'AWS::AutoScaling::LaunchConfiguration'
     Properties:
       ImageId: !FindInMap
-        - RegionMap
+        - mRegionMap
         - !Ref 'AWS::Region'
         - AMI
       InstanceType: !Ref pInstanceType
@@ -1044,14 +1098,14 @@ Resources:
       GroupDescription: Frontend instance security group
       SecurityGroupIngress:
         - !If 
-          - AddIPRangeApplication
+          - cAddIPRangeApplication
           - IpProtocol: tcp
             FromPort: 80
             ToPort: 80
             CidrIp: !Ref pIPRangeApplication
           - 'AWS::NoValue'
         - !If 
-          - AddIPRangeApplication
+          - cAddIPRangeApplication
           - IpProtocol: tcp
             FromPort: 443
             ToPort: 443
@@ -1152,7 +1206,7 @@ Resources:
           Key: Name
   rDatabaseReplicaInstance: # Aurora DB replica instance
     Type: 'AWS::RDS::DBInstance'
-    Condition: AuroraMultiAZ
+    Condition: cAuroraMultiAZ
     DeletionPolicy: Delete
     Properties:
       Engine: aurora
@@ -1275,17 +1329,17 @@ Resources:
         Value: !Ref pBlacklistIPset
   rWAFReputationListsSet: # Creates a list of Ip addresses for to be included in the WAF rule
     Type: 'AWS::WAF::IPSet'
-    Condition: ReputationListsProtectionActivated
+    Condition: cReputationListsProtectionActivated
     Properties:
       Name: !Sub '${pEnvironmentName} - IP Reputation Lists Set'
   rWAFBadBotSet: # Creates a list of Ip addresses for to be included in the WAF rule
     Type: 'AWS::WAF::IPSet'
-    Condition: BadBotProtectionActivated
+    Condition: cBadBotProtectionActivated
     Properties:
       Name: !Sub '${pEnvironmentName} - IP Bad Bot Set'
   rWAFSqlInjectionDetection: # Creates a match set for any malicious sqlcode 
     Type: 'AWS::WAF::SqlInjectionMatchSet'
-    Condition: SqlInjectionProtectionActivated
+    Condition: cSqlInjectionProtectionActivated
     Properties:
       Name: !Sub '${pEnvironmentName} - SQL injection Detection'
       SqlInjectionMatchTuples:
@@ -1362,7 +1416,7 @@ Resources:
             reason: Waf rules
   rWAFXssDetection: # Creates a detection for cross site scripting
     Type: 'AWS::WAF::XssMatchSet'
-    Condition: CrossSiteScriptingProtectionActivated
+    Condition: cCrossSiteScriptingProtectionActivated
     Properties:
       Name: !Sub '${pEnvironmentName} - XSS Detection Detection'
       XssMatchTuples:
@@ -1412,7 +1466,7 @@ Resources:
           Type: IPMatch
   rWAFIPReputationListsRule: # Creates rule to be used in WebACL
     Type: 'AWS::WAF::Rule'
-    Condition: ReputationListsProtectionActivated
+    Condition: cReputationListsProtectionActivated
     Properties:
       Name: !Sub '${pEnvironmentName} - WAF IP Reputation Lists Rule'
       MetricName: !Join ['', [!Join ['', !Split ['-', !Ref pEnvironmentName]], 'IPReputationListsRule']]
@@ -1422,7 +1476,7 @@ Resources:
           Type: IPMatch
   rWAFBadBotRule: # # Creates rule to be used in WebACL
     Type: 'AWS::WAF::Rule'
-    Condition: BadBotProtectionActivated
+    Condition: cBadBotProtectionActivated
     Properties:
       Name: !Sub '${pEnvironmentName} - Bad Bot Rule'
       MetricName: !Join ['', [!Join ['', !Split ['-', !Ref pEnvironmentName]], 'BadBotRule']]
@@ -1432,7 +1486,7 @@ Resources:
           Type: IPMatch
   rWAFSqlInjectionRule: # Creates a sql injection rule to be used in WebACL
     Type: 'AWS::WAF::Rule'
-    Condition: SqlInjectionProtectionActivated
+    Condition: cSqlInjectionProtectionActivated
     Properties:
       Name: !Sub '${pEnvironmentName} - SQL Injection Rule'
       MetricName: !Join ['', [!Join ['', !Split ['-', !Ref pEnvironmentName]], 'SqlInjectionRule']]
@@ -1442,7 +1496,7 @@ Resources:
           Type: SqlInjectionMatch
   rWAFXssRule: # Creates a cross site scripting rule to be used in WebACL
     Type: 'AWS::WAF::Rule'
-    Condition: CrossSiteScriptingProtectionActivated
+    Condition: cCrossSiteScriptingProtectionActivated
     Properties:
       Name: !Sub '${pEnvironmentName} - XSS Rule'
       MetricName: !Join ['', [!Join ['', !Split ['-', !Ref pEnvironmentName]], 'XssRule']]
@@ -1451,74 +1505,74 @@ Resources:
           Negated: false
           Type: XssMatch
 Outputs:
-  VPC:
+  oVPC:
     Description: A reference to the created VPC
     Value: !Ref rVPC
-  PublicSubnets:
+  oPublicSubnets:
     Description: A list of the public subnets
     Value: !Join 
       - ','
       - - !Ref rPublicSubnet1
         - !Ref rPublicSubnet2
-  PrivateSubnets:
+  oPrivateSubnets:
     Description: A list of the private subnets
     Value: !Join 
       - ','
       - - !Ref rPrivateSubnet1
         - !Ref rPrivateSubnet2
-  PublicSubnet1:
+  oPublicSubnet1:
     Description: A reference to the public subnet in the 1st Availability Zone
     Value: !Ref rPublicSubnet1
-  PublicSubnet2:
+  oPublicSubnet2:
     Description: A reference to the public subnet in the 2nd Availability Zone
     Value: !Ref rPublicSubnet2
-  PrivateSubnet1:
+  oPrivateSubnet1:
     Description: A reference to the private subnet in the 1st Availability Zone
     Value: !Ref rPrivateSubnet1
-  PrivateSubnet2:
+  oPrivateSubnet2:
     Description: A reference to the private subnet in the 2nd Availability Zone
     Value: !Ref rPrivateSubnet2
-  S3BucketName:
+  oS3BucketName:
     Description: Bucket name
     Value: !Ref rS3Bucket
-  CfDistributionId:
+  oCfDistributionId:
     Description: Id for our cloudfront distribution
     Value: !Ref rCfDistribution
-  CfDistributionDomainName:
+  oCfDistributionDomainName:
     Description: Domain name for our cloudfront distribution
     Value: !GetAtt rCfDistribution.DomainName
-  WAFWhitelistSet:
+  oWAFWhitelistSet:
     Value: !Ref rWAFWhitelistSet
 
-  WAFBlacklistSet:
+  oWAFBlacklistSet:
     Value: !Ref rWAFBlacklistSet
 
-  WAFReputationListsSet:
+  oWAFReputationListsSet:
     Value: !Ref rWAFReputationListsSet
-    Condition: ReputationListsProtectionActivated
+    Condition: cReputationListsProtectionActivated
 
-  WAFBadBotSet:
+  oWAFBadBotSet:
     Value: !Ref rWAFBadBotSet
-    Condition: BadBotProtectionActivated
+    Condition: cBadBotProtectionActivated
 
-  WAFWhitelistRule:
+  oWAFWhitelistRule:
     Value: !Ref rWAFWhitelistRule
 
-  WAFBlacklistRule:
+  oWAFBlacklistRule:
     Value: !Ref rWAFBlacklistRule
 
-  WAFIPReputationListsRule:
+  oWAFIPReputationListsRule:
     Value: !Ref rWAFIPReputationListsRule
-    Condition: ReputationListsProtectionActivated
+    Condition: cReputationListsProtectionActivated
 
-  WAFBadBotRule:
+  oWAFBadBotRule:
     Value: !Ref rWAFBadBotRule
-    Condition: BadBotProtectionActivated
+    Condition: cBadBotProtectionActivated
 
-  WAFSqlInjectionRule:
+  oWAFSqlInjectionRule:
     Value: !Ref rWAFSqlInjectionRule
-    Condition: SqlInjectionProtectionActivated
+    Condition: cSqlInjectionProtectionActivated
 
-  WAFXssRule:
+  oWAFXssRule:
     Value: !Ref rWAFXssRule
-    Condition: CrossSiteScriptingProtectionActivated
+    Condition: cCrossSiteScriptingProtectionActivated
