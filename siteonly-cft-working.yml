@@ -1,6 +1,6 @@
-#  (c) 2020 Amazon Web Services, Inc. or its affiliates. All Rights Reserved. This AWS Content is provided subject to the terms of the AWS  
-#   Customer Agreement available at https://aws.amazon.com/agreement or other writtenagreement between Customer  
-#   and Amazon Web Services, Inc. 
+#  (c) 2020 Amazon Web Services, Inc. or its affiliates. All Rights Reserved. This AWS Content is provided subject to the terms of the AWS
+#   Customer Agreement available at https://aws.amazon.com/agreement or other writtenagreement between Customer
+#   and Amazon Web Services, Inc.
 AWSTemplateFormatVersion: 2010-09-09
 Description: >-
   This template deploys a VPC, with a pair of public and private subnets spread
@@ -10,7 +10,7 @@ Description: >-
 Parameters:
   pKeyPair:
     Type: AWS::EC2::KeyPair::KeyName
-    Description: Enter the name of an already existing key pair. 
+    Description: Enter the name of an already existing key pair.
     Default: nvirginiaskangnohkey
   pVPCName:
     Type: String
@@ -22,7 +22,7 @@ Parameters:
     Default: arn:aws:acm:us-east-1:171602812093:certificate/0e4b6f74-17dd-4660-b0c5-0fc2b0d21635
   pInstanceType:
     Type: String
-    Description: Enter an instance type for your EC2 instance. 
+    Description: Enter an instance type for your EC2 instance.
     AllowedValues:
       - t2.small
       - t3.small
@@ -57,7 +57,7 @@ Parameters:
     Type: String
     Default: DaksTG
   pASGLaunchConfigurationName:
-    Description: Enter a name for the Launch configuration 
+    Description: Enter a name for the Launch configuration
     Type: String
     Default: DaksLC
   pVpcCIDR:
@@ -89,13 +89,13 @@ Parameters:
     Type: String
     Default: 10.190.21.0/24
   pPrivateSubnet3CIDR:
-    Description: 
+    Description:
       Please enter the IP range (CIDR notation) for the second private subnet in the
       first Availability Zone
     Type: String
     Default: 10.190.30.0/24
   pPrivateSubnet4CIDR:
-    Description: 
+    Description:
       Please enter the IP range (CIDR notation) for the second private subnet in the
       second Availability Zone
     Type: String
@@ -249,7 +249,7 @@ Parameters:
     Description: Launch configuration name for Bastion host
     Type: String
     Default: DaksBastionLC
-  
+
 Conditions:
   SqlInjectionProtectionActivated: !Equals
     - !Ref pActivateSqlInjectionProtectionParam
@@ -257,18 +257,18 @@ Conditions:
   CrossSiteScriptingProtectionActivated: !Equals
     - !Ref pActivateCrossSiteScriptingProtectionParam
     - 'yes'
-  AlwaysTrue: !Equals 
+  AlwaysTrue: !Equals
     - true
     - true
-  AddIPRangeSSH: !Not 
-    - !Equals 
+  AddIPRangeSSH: !Not
+    - !Equals
       - !Ref pIPRangeSSH
       - ''
-  AddIPRangeApplication: !Not 
-    - !Equals 
+  AddIPRangeApplication: !Not
+    - !Equals
       - !Ref pIPRangeApplication
       - ''
-  AuroraMultiAZ: !Equals 
+  AuroraMultiAZ: !Equals
     - !Ref pMultiAZ
     - 'true'
   ReputationListsProtectionActivated: !Equals
@@ -277,7 +277,7 @@ Conditions:
   BadBotProtectionActivated: !Equals
     - !Ref pActivateBadBotProtectionParam
     - 'yes'
-    
+
 Mappings:
   RegionMap:
     us-east-1:
@@ -340,7 +340,7 @@ Resources:
     Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref rVPC
-      AvailabilityZone: !Select 
+      AvailabilityZone: !Select
         - 0
         - !GetAZs ''
       CidrBlock: !Ref pPublicSubnet1CIDR
@@ -352,7 +352,7 @@ Resources:
     Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref rVPC
-      AvailabilityZone: !Select 
+      AvailabilityZone: !Select
         - 1
         - !GetAZs ''
       CidrBlock: !Ref pPublicSubnet2CIDR
@@ -364,7 +364,7 @@ Resources:
     Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref rVPC
-      AvailabilityZone: !Select 
+      AvailabilityZone: !Select
         - 0
         - !GetAZs ''
       CidrBlock: !Ref pPrivateSubnet1CIDR
@@ -376,7 +376,7 @@ Resources:
     Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref rVPC
-      AvailabilityZone: !Select 
+      AvailabilityZone: !Select
         - 1
         - !GetAZs ''
       CidrBlock: !Ref pPrivateSubnet2CIDR
@@ -388,7 +388,7 @@ Resources:
     Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref rVPC
-      AvailabilityZone: !Select 
+      AvailabilityZone: !Select
         - 0
         - !GetAZs ''
       CidrBlock: !Ref pPrivateSubnet3CIDR
@@ -400,14 +400,14 @@ Resources:
     Type: 'AWS::EC2::Subnet'
     Properties:
       VpcId: !Ref rVPC
-      AvailabilityZone: !Select 
+      AvailabilityZone: !Select
         - 1
         - !GetAZs ''
       CidrBlock: !Ref pPrivateSubnet4CIDR
       MapPublicIpOnLaunch: false
       Tags:
         - Key: Name
-          Value: !Sub '${pEnvironmentName} Private Subnet (AZ2)' 
+          Value: !Sub '${pEnvironmentName} Private Subnet (AZ2)'
   rNatGateway1EIP: # creates an EIP for NatGateway in the public subnet of first AZ
     Type: 'AWS::EC2::EIP'
     DependsOn: rInternetGatewayAttachment
@@ -419,24 +419,24 @@ Resources:
       AllocationId: !GetAtt rNatGateway1EIP.AllocationId
       SubnetId: !Ref rPublicSubnet1
       Tags:
-      - Key: Name
-        Value: !Sub '${pEnvironmentName} AZ1 NatGateway'
+        - Key: Name
+          Value: !Sub '${pEnvironmentName} AZ1 NatGateway'
   rNatGateway2EIP: # creates an EIP for NatGateway in the public subnet of second AZ
     Type: 'AWS::EC2::EIP'
     DependsOn: rInternetGatewayAttachment
     Properties:
       Domain: vpc
       Tags:
-      - Key: Name
-        Value: !Sub '${pEnvironmentName} AZ2 EIP'
+        - Key: Name
+          Value: !Sub '${pEnvironmentName} AZ2 EIP'
   rNatGateway2: # creates a NatGateway in the public subnet of the Second AZ
     Type: 'AWS::EC2::NatGateway'
     Properties:
       AllocationId: !GetAtt rNatGateway2EIP.AllocationId
       SubnetId: !Ref rPublicSubnet2
       Tags:
-      - Key: Name
-        Value: !Sub '${pEnvironmentName} AZ2 NatGateway'
+        - Key: Name
+          Value: !Sub '${pEnvironmentName} AZ2 NatGateway'
   rPublicRouteTable: # Create a Route table for public subnets
     Type: 'AWS::EC2::RouteTable'
     Properties:
@@ -497,26 +497,26 @@ Resources:
     Properties:
       RouteTableId: !Ref rPrivateRouteTable2
       SubnetId: !Ref rPrivateSubnet2
-  rAppSG: #ELB Security group allowing port 80 and 443 from the load balancer 
+  rAppSG: #ELB Security group allowing port 80 and 443 from the load balancer
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: ELB security group for port 80 and 443
       SecurityGroupIngress:
-        - !If 
+        - !If
           - AddIPRangeSSH
           - IpProtocol: tcp
             FromPort: 22
             ToPort: 22
             SourceSecurityGroupId: !Ref rBastionASGSG
           - 'AWS::NoValue'
-        - !If 
+        - !If
           - AddIPRangeApplication
           - IpProtocol: tcp
             FromPort: 80
             ToPort: 80
             SourceSecurityGroupId: !Ref rFrontendSecurityGroup
           - 'AWS::NoValue'
-        - !If 
+        - !If
           - AddIPRangeApplication
           - IpProtocol: tcp
             FromPort: 443
@@ -562,20 +562,20 @@ Resources:
         - Key: stickiness.lb_cookie.duration_seconds
           Value: '604800'
       TargetType: instance
-      UnhealthyThresholdCount: 3  
+      UnhealthyThresholdCount: 3
   rHTTPListener: # Specifies a HTTP listener for an Application Load Balancer
     Type: 'AWS::ElasticLoadBalancingV2::Listener'
     Properties:
       DefaultActions:
-      - TargetGroupArn: !Ref rTargetGroup
-        Type: forward
+        - TargetGroupArn: !Ref rTargetGroup
+          Type: forward
       LoadBalancerArn: !Ref rLoadBalancer
       Port: 80
       Protocol: HTTP
   rHTTPSListener: # Specifies a HTTPs listener for an Application Load Balancer
     Type: 'AWS::ElasticLoadBalancingV2::Listener'
     Properties:
-      Certificates: 
+      Certificates:
         - CertificateArn: !Ref pCertificateArn
       DefaultActions:
         - Type: forward
@@ -583,30 +583,11 @@ Resources:
       LoadBalancerArn: !Ref rLoadBalancer
       Port: 443
       Protocol: HTTPS
-  rASGLaunchConfiguration: #Create launch configuration for application ASGS
-    Type: 'AWS::AutoScaling::LaunchConfiguration'
-    DependsOn:
-      - rDatabaseInstance
-      - rInternetGatewayAttachment
+  BitnamiConstants:
+    Type: 'Custom::BitnamiConstants'
+    Version: '1.0'
     Properties:
-      AssociatePublicIpAddress: 'false'
-      ImageId: !FindInMap 
-        - RegionMap
-        - !Ref 'AWS::Region'
-        - AMI
-      InstanceType: !Ref pInstanceType
-      BlockDeviceMappings:
-        - DeviceName: /dev/xvdc
-          Ebs:
-            VolumeType: !Ref pInstancesDataDiskType
-            VolumeSize: !Ref pInstancesDataDiskSize
-      KeyName: !Ref pKeyPair
-      LaunchConfigurationName: !Ref pASGLaunchConfigurationName
-      IamInstanceProfile: !Ref rASGInstanceProfile
-      SecurityGroups:
-        - !Ref rAppSG
-        - !Ref rSharedSecurityGroup
-      UserData: !Base64 
+      Fn::Base64:
         Fn::Join:
           - ''
           - - |
@@ -619,7 +600,7 @@ Resources:
 
             - !Ref 'AWS::StackId'
             - ' '
-            
+
             - !Ref 'AWS::Region'
             - |-
 
@@ -653,57 +634,92 @@ Resources:
             - |-
 
               #PROVISIONER_PEER_ADDRESS=
-            - !GetAtt 
+            - !GetAtt
               - rDatabaseCluster
               - Endpoint.Address
             - |-
 
               #PROVISIONER_APP_PASSWORD=
             - !Ref pApplicationPassword
-            
-            - |-
-            
-            - cat <<EOT > /tmp/config.json
-            {
-              "agent": {
-                  "metrics_collection_interval": 60,
-                  "run_as_user": "root"   
-              },
-              "metrics": {
-                "append_dimensions": {
-                  "AutoScalingGroupName": "\${!aws:AutoScalingGroupName}",
-                  "ImageId": "\${!aws:ImageId}",
-                  "InstanceId": "\${!aws:InstanceId}",
-                  "InstanceType": "\${!aws:InstanceType}"
-                },
-                "metrics_collected": {
-                  "collectd": {
-                    "metrics_aggregation_interval": 60
-                  },
-                  "disk": {
-                    "measurement":[
-                      "used_percent"
-                    ],
+
+  CustomCloudWatchAgent:
+    Type: 'Custom::CloudWatchAgent'
+    Version: '1.0'
+    Properties:
+      Fn::Sub: |
+        #cloud-config
+        write_files:
+          - path: /tmp/config.json
+            permissions: 0644
+            owner: root
+            content: |
+              {
+                "agent": {
                     "metrics_collection_interval": 60,
-                    "resources": [
-                      "*"
-                    ]
+                    "run_as_user": "root"
+                },
+                "metrics": {
+                  "append_dimensions": {
+                    "AutoScalingGroupName": "${!aws:AutoScalingGroupName}",
+                    "ImageId": "${!aws:ImageId}",
+                    "InstanceId": "${!aws:InstanceId}",
+                    "InstanceType": "${!aws:InstanceType}"
                   },
-                  "mem": {
-                    "measurement":[
-                      "mem_used_percent"
-                    ],
-                    "metrics_collection_interval": 60
+                  "metrics_collected": {
+                    "collectd": {
+                      "metrics_aggregation_interval": 60
+                    },
+                    "disk": {
+                      "measurement":[
+                        "used_percent"
+                      ],
+                      "metrics_collection_interval": 60,
+                      "resources": [
+                        "*"
+                      ]
+                    },
+                    "mem": {
+                      "measurement":[
+                        "mem_used_percent"
+                      ],
+                      "metrics_collection_interval": 60
+                    }
                   }
                 }
               }
-            }     
-            EOT
+        runcmd:
+          - wget -Uvh https://s3.amazonaws.com/amazoncloudwatch-agent/debian/amd64/latest/amazon-cloudwatch-agent.deb
+          - sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
+          - sudo apt-get update && sudo apt-get install collectd -y
+          - sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/tmp/config.json -s
 
-            wget -Uvh https://s3.amazonaws.com/amazoncloudwatch-agent/debian/amd64/latest/amazon-cloudwatch-agent.deb
-            sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
-            sudo apt-get install collectd -y
-            sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/tmp/config.json -s
+  rASGLaunchConfiguration: #Create launch configuration for application ASGS
+    Type: 'AWS::AutoScaling::LaunchConfiguration'
+    DependsOn:
+      - rDatabaseInstance
+      - rInternetGatewayAttachment
+    Properties:
+      AssociatePublicIpAddress: 'false'
+      ImageId: !FindInMap
+        - RegionMap
+        - !Ref 'AWS::Region'
+        - AMI
+      InstanceType: !Ref pInstanceType
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvdc
+          Ebs:
+            VolumeType: !Ref pInstancesDataDiskType
+            VolumeSize: !Ref pInstancesDataDiskSize
+      KeyName: !Ref pKeyPair
+      LaunchConfigurationName: !Ref pASGLaunchConfigurationName
+      IamInstanceProfile: !Ref rASGInstanceProfile
+      SecurityGroups:
+        - !Ref rAppSG
+        - !Ref rSharedSecurityGroup
+      UserData:
+        Fn::GetAtt:
+          - BitnamiConstants
+          - CustomCloudWatchAgent
 
   rASGInstanceProfile: # Creates an instance profile for the launch configuration
     Type: 'AWS::IAM::InstanceProfile'
@@ -973,7 +989,7 @@ Resources:
       Cooldown: '1'
       ScalingAdjustment: -1
 
-  rSharedSecurityGroup:  # Create security group for internal communication
+  rSharedSecurityGroup: # Create security group for internal communication
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Security Group for the internal communications
@@ -989,25 +1005,25 @@ Resources:
       IpProtocol: '-1'
       FromPort: '3306'
       ToPort: '3306'
-      SourceSecurityGroupId: !GetAtt 
+      SourceSecurityGroupId: !GetAtt
         - rSharedSecurityGroup
         - GroupId
-      GroupId: !GetAtt 
+      GroupId: !GetAtt
         - rSharedSecurityGroup
         - GroupId
-  rFrontendSecurityGroup: # Security group for the public facing load balancer 
+  rFrontendSecurityGroup: # Security group for the public facing load balancer
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Frontend instance security group
       SecurityGroupIngress:
-        - !If 
+        - !If
           - AddIPRangeApplication
           - IpProtocol: tcp
             FromPort: 80
             ToPort: 80
             CidrIp: !Ref pIPRangeApplication
           - 'AWS::NoValue'
-        - !If 
+        - !If
           - AddIPRangeApplication
           - IpProtocol: tcp
             FromPort: 443
@@ -1018,7 +1034,7 @@ Resources:
         - Key: Name
           Value: !Sub '${pEnvironmentName} FrontendSG'
       VpcId: !Ref rVPC
-  rDatabaseSecurityGroup: # Security group for Aurora DB cluster 
+  rDatabaseSecurityGroup: # Security group for Aurora DB cluster
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
       GroupDescription: Database instance security group
@@ -1031,7 +1047,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub '${pEnvironmentName} Database SG'
-  
+
   rDatabaseSubnetGroup: # Creates a subnetgroup to associate with AuroraDB cluster
     Type: 'AWS::RDS::DBSubnetGroup'
     Properties:
@@ -1076,7 +1092,7 @@ Resources:
     Properties:
       Engine: aurora
       DBClusterIdentifier: !Ref rDatabaseCluster
-      DBInstanceIdentifier: !Join 
+      DBInstanceIdentifier: !Join
         - ''
         - - !Ref 'AWS::StackName'
           - '-DatabaseMachine'
@@ -1092,7 +1108,7 @@ Resources:
     Properties:
       Engine: aurora
       DBClusterIdentifier: !Ref rDatabaseCluster
-      DBInstanceIdentifier: !Join 
+      DBInstanceIdentifier: !Join
         - ''
         - - !Ref 'AWS::StackName'
           - '-DatabaseReplicaMachine'
@@ -1102,20 +1118,19 @@ Resources:
         - Value: wordpress-database-replica
           Key: Name
 
-  
 Outputs:
   VPC:
     Description: A reference to the created VPC
     Value: !Ref rVPC
   PublicSubnets:
     Description: A list of the public subnets
-    Value: !Join 
+    Value: !Join
       - ','
       - - !Ref rPublicSubnet1
         - !Ref rPublicSubnet2
   PrivateSubnets:
     Description: A list of the private subnets
-    Value: !Join 
+    Value: !Join
       - ','
       - - !Ref rPrivateSubnet1
         - !Ref rPrivateSubnet2
@@ -1131,5 +1146,3 @@ Outputs:
   PrivateSubnet2:
     Description: A reference to the private subnet in the 2nd Availability Zone
     Value: !Ref rPrivateSubnet2
-  
-  
