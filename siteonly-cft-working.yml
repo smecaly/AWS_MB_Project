@@ -608,25 +608,25 @@ Resources:
         - !Ref rSharedSecurityGroup
       UserData: !Base64
         Fn::Sub: |
-          - #PROVISIONER_PEER_PASSWORD_INPUT=${AWS::AccountId} ${AWS::StackId} ${AWS::Region}
+          #PROVISIONER_PEER_PASSWORD_INPUT=${AWS::AccountId} ${AWS::StackId} ${AWS::Region}
 
-          - #PROVISIONER_PEER_PASSWORD=${pDatabasePassword}
+          #PROVISIONER_PEER_PASSWORD=${pDatabasePassword}
 
-          - #PROVISIONER_SHARED_UNIQUE_ID_INPUT=${AWS::AccountId} ${AWS::StackId} ${AWS::Region}
+          #PROVISIONER_SHARED_UNIQUE_ID_INPUT=${AWS::AccountId} ${AWS::StackId} ${AWS::Region}
 
-          - #PROVISIONER_CFN_RESOURCE=Machine
+          #PROVISIONER_CFN_RESOURCE=Machine
 
-          - #PROVISIONER_CFN_STACK=${AWS::StackName}
+          #PROVISIONER_CFN_STACK=${AWS::StackName}
 
-          - #PROVISIONER_CFN_REGION=${AWS::Region}
+          #PROVISIONER_CFN_REGION=${AWS::Region}
 
-          - #PROVISIONER_DATA_DISK=/dev/xvdc
+          #PROVISIONER_DATA_DISK=/dev/xvdc
 
-          - #PROVISIONER_TIER=frontend
+          #PROVISIONER_TIER=frontend
 
-          - #PROVISIONER_PEER_ADDRESS=${rDatabaseCluster}${!GetAtt Endpoint.Address}
+          #PROVISIONER_PEER_ADDRESS=${rDatabaseCluster}${!GetAtt Endpoint.Address}
 
-          - #PROVISIONER_APP_PASSWORD=${pApplicationPassword}
+          #PROVISIONER_APP_PASSWORD=${pApplicationPassword}
 
           #cloud-config
           write_files:
