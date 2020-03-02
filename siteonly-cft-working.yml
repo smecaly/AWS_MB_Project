@@ -89,14 +89,12 @@ Parameters:
     Type: String
     Default: 10.190.21.0/24
   pPrivateSubnet3CIDR:
-    Description:
-      Please enter the IP range (CIDR notation) for the second private subnet in the
+    Description: Please enter the IP range (CIDR notation) for the second private subnet in the
       first Availability Zone
     Type: String
     Default: 10.190.30.0/24
   pPrivateSubnet4CIDR:
-    Description:
-      Please enter the IP range (CIDR notation) for the second private subnet in the
+    Description: Please enter the IP range (CIDR notation) for the second private subnet in the
       second Availability Zone
     Type: String
     Default: 10.190.31.0/24
@@ -589,7 +587,7 @@ Resources:
       - rDatabaseInstance
       - rInternetGatewayAttachment
     Properties:
-      AssociatePublicIpAddress: 'false'
+      AssociatePublicIpAddress: false
       ImageId: !FindInMap
         - RegionMap
         - !Ref 'AWS::Region'
@@ -754,7 +752,7 @@ Resources:
         02_config-amazon-cloudwatch-agent:
           files:
             /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json:
-              content: !Sub |
+              content: |
                 {
                   "metrics": {
                     "append_dimensions": {
@@ -833,10 +831,10 @@ Resources:
     Type: 'AWS::AutoScaling::AutoScalingGroup'
     UpdatePolicy:
       AutoScalingRollingUpdate:
-        MinInstancesInService: '1'
-        MaxBatchSize: '1'
+        MinInstancesInService: 1
+        MaxBatchSize: 1
         PauseTime: PT15M
-        WaitOnResourceSignals: 'true'
+        WaitOnResourceSignals: true
         SuspendProcesses:
           - HealthCheck
           - ReplaceUnhealthy
@@ -866,10 +864,10 @@ Resources:
     Type: 'AWS::AutoScaling::AutoScalingGroup'
     UpdatePolicy:
       AutoScalingRollingUpdate:
-        MinInstancesInService: '1'
-        MaxBatchSize: '1'
+        MinInstancesInService: 1
+        MaxBatchSize: 1
         PauseTime: PT15M
-        WaitOnResourceSignals: 'true'
+        WaitOnResourceSignals: true
         SuspendProcesses:
           - HealthCheck
           - ReplaceUnhealthy
@@ -956,11 +954,10 @@ Resources:
       VpcId: !Ref rVPC
   rSharedSecurityGroupIngress0: # Create Ingress rule for shared security group
     Type: 'AWS::EC2::SecurityGroupIngress'
-    DependsOn: rSharedSecurityGroup
     Properties:
       IpProtocol: '-1'
-      FromPort: '3306'
-      ToPort: '3306'
+      FromPort: 3306
+      ToPort: 3306
       SourceSecurityGroupId: !GetAtt
         - rSharedSecurityGroup
         - GroupId
@@ -996,8 +993,8 @@ Resources:
       GroupDescription: Database instance security group
       SecurityGroupIngress:
         - IpProtocol: 'tcp'
-          FromPort: '3306'
-          ToPort: '3306'
+          FromPort: 3306
+          ToPort: 3306
           SourceSecurityGroupId: !Ref rAppSG
       VpcId: !Ref rVPC
       Tags:
