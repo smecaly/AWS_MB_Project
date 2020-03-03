@@ -624,10 +624,8 @@ Resources:
 
           #PROVISIONER_TIER=frontend
 
-          #PROVISIONER_PEER_ADDRESS=
-          Fn::GetAtt:
-            - rDatabaseCluster
-            - Endpoint.Address
+          #PROVISIONER_PEER_ADDRESS=${rDatabaseCluster.Endpoint.Address}
+          
 
           #PROVISIONER_APP_PASSWORD=${pApplicationPassword}
 
