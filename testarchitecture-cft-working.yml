@@ -14,58 +14,58 @@ Metadata:
     - Label:
         default: Networking set up
       Parameters:
-      - pDomainName
-      - pSubDomainName
-      - pEnvironmentName
-      - pPublicHostedZoneId
-      - pVPCName
-      - pVpcCIDR
-      - pInternetGatewayName
-      - pAvailabilityZone
-      - pSecondAvailabilityZone
-      - pPrivateSubnet1CIDR
-      - pPrivateSubnet2CIDR
-      - pPrivateSubnet3CIDR
-      - pPrivateSubnet4CIDR
-      - pPublicSubnet1CIDR
-      - pPublicSubnet2CIDR 
+        - pDomainName
+        - pSubDomainName
+        - pEnvironmentName
+        - pPublicHostedZoneId
+        - pVPCName:
+        - pVpcCIDR
+        - pInternetGatewayName
+        - pAvailabilityZone
+        - pSecondAvailabilityZone
+        - pPrivateSubnet1CIDR
+        - pPrivateSubnet2CIDR
+        - pPrivateSubnet3CIDR
+        - pPrivateSubnet4CIDR
+        - pPublicSubnet1CIDR
+        - pPublicSubnet2CIDR 
     - Label:
         default: Compute set up
       Parameters:
-      - pApplicationPassword
-      - pApplicationUsername
-      - pASGLaunchConfigurationName
-      - pASGRoleName
-      - pBastionASGLaunchConfigurationName
-      - pInstancesDataDiskSize
-      - pInstancesDataDiskType
-      - pInstanceType
-      - pIPRangeApplication
-      - pIPRangeSSH
-      - pKeyPair
-      - pLoadBalancerName
-      - pTargetGroupName
+        - pApplicationPassword
+        - pApplicationUsername
+        - pASGLaunchConfigurationName
+        - pASGRoleName
+        - pBastionASGLaunchConfigurationName
+        - pInstancesDataDiskSize
+        - pInstancesDataDiskType
+        - pInstanceType
+        - pIPRangeApplication
+        - pIPRangeSSH
+        - pKeyPair
+        - pLoadBalancerName
+        - pTargetGroupName
     - Label:
         default: Storage set up
       Parameters:
-      - pDatabaseInstanceClass
-      - pDatabasePassword
-      - pMultiAZ
+        - pDatabaseInstanceClass
+        - pDatabasePassword
+        - pMultiAZ
     - Label:
         default: Security set up
       Parameters:
-      - pActivateBadBotProtectionParam
-      - pActivateCrossSiteScriptingProtectionParam
-      - pActivateReputationListsProtectionParam
-      - pActivateSqlInjectionProtectionParam
-      - pBlacklistIPset
-      - pCertificateArn
+        - pActivateBadBotProtectionParam
+        - pActivateCrossSiteScriptingProtectionParam
+        - pActivateReputationListsProtectionParam
+        - pActivateSqlInjectionProtectionParam
+        - pBlacklistIPset
+        - pCertificateArn
 
 Parameters:
   pKeyPair:
     Type: AWS::EC2::KeyPair::KeyName
     Description: Enter the name of an already existing key pair. 
-    Default: nvirginiaskangnohkey
+    Default: 
   pVPCName:
     Type: String
     Description: Enter the name of the VPC you will be creating
@@ -73,7 +73,7 @@ Parameters:
   pCertificateArn:
     Type: String
     Description: Enter Arn of the certificate at hand
-    Default: arn:aws:acm:us-east-1:171602812093:certificate/0e4b6f74-17dd-4660-b0c5-0fc2b0d21635
+    Default: 
   pInstanceType:
     Type: String
     Description: Enter an instance type for your EC2 instance. 
@@ -157,15 +157,19 @@ Parameters:
   pDomainName:
     Type: String
     Description: Enter domain name for Public hosted zone
-    Default: skangnohgroup.net
+    Default: 
   pSubDomainName:
     Type: String
     Description: Enter sub domain name for record set
-    Default: skangnohgroup.net
+    Default: 
+  pAlternateDomainName: 
+    Type: String
+    Description: Enter the alternate domain name for cloudfront set
+    Default: s
   pPublicHostedZoneId:
     Type: AWS::Route53::HostedZone::Id
     Description: Enter an Amazon Route 53 hosted zone ID, such as Z23YXV4OVPL04A.
-    Default: Z2HD1W4WRM2U3P
+    Default: 
   pIPRangeSSH:
     Description: >-
       [Required] Set the IP or IP range for SSH connectivity to machine ;
@@ -210,7 +214,7 @@ Parameters:
     Description: >-
       [Required] Admin password for WordPress - Between 8-32 characters; Include
       at least one digit, upper case letter and no special characters.
-    Default: Susane85
+    Default: 
     Type: String
     MinLength: 8
     MaxLength: 32
@@ -250,7 +254,7 @@ Parameters:
       characters; Include at least one digit, upper case letter and no special
       characters. Please check that the selected instance type is available in
       your region.
-    Default: Susane85
+    Default: 
     Type: String
     MinLength: 8
     MaxLength: 32
@@ -303,6 +307,7 @@ Parameters:
     Description: Launch configuration name for Bastion host
     Type: String
     Default: DaksBastionLC
+
   
 Conditions:
   cSqlInjectionProtectionActivated: !Equals
@@ -598,7 +603,7 @@ Resources:
     Type: 'AWS::ElasticLoadBalancingV2::TargetGroup'
     Properties:
       HealthCheckIntervalSeconds: 30
-      HealthCheckProtocol: HTTPS
+      HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 15
       HealthyThresholdCount: 5
       Name: !Ref pTargetGroupName
@@ -621,8 +626,11 @@ Resources:
     Type: 'AWS::ElasticLoadBalancingV2::Listener'
     Properties:
       DefaultActions:
-      - TargetGroupArn: !Ref rTargetGroup
-        Type: forward
+      - Type: redirect
+        RedirectConfig:
+          Protocol: HTTPS
+          StatusCode: HTTP_301
+          Port: 443
       LoadBalancerArn: !Ref rLoadBalancer
       Port: 80
       Protocol: HTTP
@@ -932,8 +940,8 @@ Resources:
     Properties:
       EvaluationPeriods: 1
       Statistic: Average
-      Threshold: 30
-      AlarmDescription: Go in Alarm if memory is lower than 30% for 60 seconds
+      Threshold: 10
+      AlarmDescription: Go in Alarm if memory is lower than 10% for 60 seconds
       Period: 60
       AlarmActions:
         - Ref: rScaleDownPolicy
@@ -1144,7 +1152,7 @@ Resources:
     Properties:
       DistributionConfig:
         Aliases:
-          - !Ref pSubDomainName
+          - !Ref pAlternateDomainName
         ViewerCertificate:
           AcmCertificateArn: !Ref pCertificateArn
           MinimumProtocolVersion: TLSv1
@@ -1168,7 +1176,7 @@ Resources:
           MaxTTL: 31536000
           MinTTL: 86400
           TargetOriginId: ELB Endpoint
-          ViewerProtocolPolicy: allow-all
+          ViewerProtocolPolicy: redirect-to-https
         CacheBehaviors:
           - TargetOriginId: !Sub 's3-origin-${rS3Bucket}'
             AllowedMethods:
@@ -1188,7 +1196,7 @@ Resources:
               QueryString: false
             MaxTTL: 31536000
             MinTTL: 86400
-            ViewerProtocolPolicy: allow-all
+            ViewerProtocolPolicy: redirect-to-https
         DefaultRootObject: index.html
         Enabled: true
         HttpVersion: http1.1
@@ -1202,7 +1210,7 @@ Resources:
           - DomainName: !GetAtt rLoadBalancer.DNSName
             Id: ELB Endpoint
             CustomOriginConfig:
-              OriginProtocolPolicy: http-only
+              OriginProtocolPolicy: https-only
               OriginSSLProtocols:
                 - TLSv1
                 - TLSv1.1
