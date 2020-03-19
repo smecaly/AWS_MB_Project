@@ -1,0 +1,565 @@
+# (c) 2019 Amazon Web Services, Inc. or its affiliates. All Rights Reserved. This AWS Content
+# is provided subject to the terms of the AWS Customer Agreement available at
+# https://aws.amazon.com/agreement/ or other written agreement between Customer
+# and Amazon Web Services, Inc.
+Description: This template provisions a vpc for three tiers application.
+AWSTemplateFormatVersion: 2010-09-09
+Metadata:
+  'AWS::CloudFormation::Interface':
+    ParameterGroups:
+      - Label:
+          default: Environment Configuration
+        Parameters:
+          - pEnvironmentName
+      - Label:
+          default: Network Configuration
+        Parameters:
+          - pFirst2NetworkOctets
+    ParameterLabels:
+      pEnvironmentName:
+        default: Environment Name
+      pFirst2NetworkOctets:
+        default: First 2 Network Octets
+Parameters:
+  pEnvironmentName:
+    Description: Enter the environment name.
+    Type: String
+    Default: Workspaces
+  pFirst2NetworkOctets:
+    Description: Enter first 2 network octets of your VPC CIDR (Like 10.0)
+    Type: String
+    Default: '10.247'
+Resources:
+  rNewVPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: !Sub '${pFirst2NetworkOctets}.0.0/16'
+      InstanceTenancy: default
+      EnableDnsSupport: 'true'
+      EnableDnsHostnames: 'true'
+      Tags:
+        - Key: Name
+          Value: !Ref pEnvironmentName
+  rPublicSubnetA:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !Sub '${pFirst2NetworkOctets}.128.0/24'
+      AvailabilityZone: !Select 
+        - '0'
+        - !GetAZs ''
+      VpcId: !Ref rNewVPC
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Reach
+          Value: public
+        - Key: Name
+          Value: !Sub '${pEnvironmentName}_Public_Subnet_A'
+  rPublicSubnetB:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !Sub '${pFirst2NetworkOctets}.129.0/24'
+      AvailabilityZone: !Select 
+        - '1'
+        - !GetAZs ''
+      VpcId: !Ref rNewVPC
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Reach
+          Value: public
+        - Key: Name
+          Value: !Sub '${pEnvironmentName}_Public_Subnet_B'
+  rPublicSubnetC:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !Sub '${pFirst2NetworkOctets}.130.0/24'
+      AvailabilityZone: !Select 
+        - '2'
+        - !GetAZs ''
+      VpcId: !Ref rNewVPC
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Reach
+          Value: public
+        - Key: Name
+          Value: !Sub '${pEnvironmentName}_Public_Subnet_C'
+  rNatSubnetA:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !Sub '${pFirst2NetworkOctets}.132.0/24'
+      AvailabilityZone: !Select 
+        - '0'
+        - !GetAZs ''
+      VpcId: !Ref rNewVPC
+      Tags:
+        - Key: Reach
+          Value: NAT
+        - Key: Name
+          Value: !Sub '${pEnvironmentName}_NAT_Subnet_A'
+  rNatSubnetB:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !Sub '${pFirst2NetworkOctets}.133.0/24'
+      AvailabilityZone: !Select 
+        - '1'
+        - !GetAZs ''
+      VpcId: !Ref rNewVPC
+      Tags:
+        - Key: Reach
+          Value: public
+        - Key: Name
+          Value: !Sub '${pEnvironmentName}_NAT_Subnet_B'
+  rNatSubnetC:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      CidrBlock: !Sub '${pFirst2NetworkOctets}.134.0/24'
+      AvailabilityZone: !Select 
+        - '2'
+        - !GetAZs ''
+      VpcId: !Ref rNewVPC
+      Tags:
+        - Key: Reach
+          Value: public
+        - Key: Name
+          Value: !Sub '${pEnvironmentName}_NAT_Subnet_C'
+  rNat:
+    Type: 'AWS::EC2::NatGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${pEnvironmentName}NatGateway'
+      AllocationId: !GetAtt 
+        - rNatEip
+        - AllocationId
+      SubnetId: !Ref rPublicSubnetA
+  rNatAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      InternetGatewayId: !Ref rInternetGateway
+      VpcId: !Ref rNewVPC
+  rNatEip:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  rNatRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref rNat
+      RouteTableId: !Ref rNatRouteTable
+  rInternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${pEnvironmentName}IG'
+  rDHCPOptions:
+    Type: 'AWS::EC2::DHCPOptions'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${pEnvironmentName}DHCPOptions'
+      DomainName: ec2.internal
+      DomainNameServers:
+        - AmazonProvidedDNS
+  rPublicNACLB:
+    Type: 'AWS::EC2::NetworkAcl'
+    Properties:
+      VpcId: !Ref rNewVPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${pEnvironmentName} Public'
+  rNatNacl:
+    Type: 'AWS::EC2::NetworkAcl'
+    Properties:
+      VpcId: !Ref rNewVPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${pEnvironmentName} NAT'
+  rPrivateNACLC:
+    Type: 'AWS::EC2::NetworkAcl'
+    Properties:
+      VpcId: !Ref rNewVPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${pEnvironmentName} Private'
+  rNatRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref rNewVPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${pEnvironmentName} NAT'
+  rPrivateRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref rNewVPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${pEnvironmentName} Private'
+  rPublicRouteTable:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref rNewVPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${pEnvironmentName} Public'
+  rPublicDBSubnetGroup:
+    Type: 'AWS::RDS::DBSubnetGroup'
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${pEnvironmentName}DBSubnetGroup'
+      DBSubnetGroupDescription: Created from the RDS Management Console
+      SubnetIds:
+        - !Ref rPublicSubnetB
+        - !Ref rPublicSubnetA
+        - !Ref rPublicSubnetC
+  rEgressEntryAPublicNACLB:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      CidrBlock: 0.0.0.0/0
+      Egress: 'true'
+      Protocol: '-1'
+      RuleAction: allow
+      RuleNumber: '99'
+      NetworkAclId: !Ref rPublicNACLB
+  rIngressEntryAPublicNACLB:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      CidrBlock: 0.0.0.0/0
+      Protocol: '-1'
+      RuleAction: allow
+      RuleNumber: '99'
+      NetworkAclId: !Ref rPublicNACLB
+  rEgressEntryANatNacl:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      CidrBlock: 0.0.0.0/0
+      Egress: 'true'
+      Protocol: '-1'
+      RuleAction: allow
+      RuleNumber: '99'
+      NetworkAclId: !Ref rNatNacl
+  rIngressEntryANatNacl:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      CidrBlock: 0.0.0.0/0
+      Protocol: '-1'
+      RuleAction: allow
+      RuleNumber: '99'
+      NetworkAclId: !Ref rNatNacl
+  rEgressEntryAPrivateNACLC:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      CidrBlock: 0.0.0.0/0
+      Egress: 'true'
+      Protocol: '-1'
+      RuleAction: allow
+      RuleNumber: '99'
+      NetworkAclId: !Ref rPrivateNACLC
+  rIngressEntryAPrivateNACLC:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      CidrBlock: 0.0.0.0/0
+      Protocol: '-1'
+      RuleAction: allow
+      RuleNumber: '99'
+      NetworkAclId: !Ref rPrivateNACLC
+  rPublicNACLBPublicSubnetBAssociation:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      NetworkAclId: !Ref rPublicNACLB
+      SubnetId: !Ref rPublicSubnetB
+  rPublicNACLBPublicSubnetCAssociation:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      NetworkAclId: !Ref rPublicNACLB
+      SubnetId: !Ref rPublicSubnetC      
+  rPublicNACLBPublicSubnetAAssociation:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      NetworkAclId: !Ref rPublicNACLB
+      SubnetId: !Ref rPublicSubnetA
+  rNatNaclNatSubnetAAssociation:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      NetworkAclId: !Ref rNatNacl
+      SubnetId: !Ref rNatSubnetA
+  rNatNaclNatSubnetBAssociation:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      NetworkAclId: !Ref rNatNacl
+      SubnetId: !Ref rNatSubnetB
+  rNatNaclNatSubnetCAssociation:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      NetworkAclId: !Ref rNatNacl
+      SubnetId: !Ref rNatSubnetC      
+  rVPCInternetGatewayAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref rNewVPC
+      InternetGatewayId: !Ref rInternetGateway
+  rNatRouteTableNatSubnetAAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref rNatRouteTable
+      SubnetId: !Ref rNatSubnetA
+  rNatRouteTableNatSubnetBAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref rNatRouteTable
+      SubnetId: !Ref rNatSubnetB
+  rNatRouteTableNatSubnetCAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref rNatRouteTable
+      SubnetId: !Ref rNatSubnetC    
+  rPublicRouteTablePublicSubnetBAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref rPublicRouteTable
+      SubnetId: !Ref rPublicSubnetB
+  rPublicRouteTablePublicSubnetCAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref rPublicRouteTable
+      SubnetId: !Ref rPublicSubnetC      
+  rPublicRouteTablePublicSubnetAAssociation:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      RouteTableId: !Ref rPublicRouteTable
+      SubnetId: !Ref rPublicSubnetA
+  rInternetRoute:
+    Type: 'AWS::EC2::Route'
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      RouteTableId: !Ref rPublicRouteTable
+      GatewayId: !Ref rInternetGateway
+    DependsOn: rVPCInternetGatewayAttachment
+  rDHCPAssociation:
+    Type: 'AWS::EC2::VPCDHCPOptionsAssociation'
+    Properties:
+      VpcId: !Ref rNewVPC
+      DhcpOptionsId: !Ref rDHCPOptions
+  rALBSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: ALB Security Group
+      VpcId: !Ref rNewVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: ALB_SecurityGroup
+  rBastionSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Bastion Security Group
+      VpcId: !Ref rNewVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: Bastion_SecurityGroup
+  rWebAppSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Web App Security Group
+      VpcId: !Ref rNewVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '5000'
+          ToPort: '5000'
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: WebApp_SecurityGroup
+  rSelfAssignedBastionWebSGIngress22:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref rWebAppSecurityGroup
+      IpProtocol: tcp
+      ToPort: '22'
+      FromPort: '22'
+      SourceSecurityGroupId: !Ref rBastionSecurityGroup
+  rSelfAssignedBastionWebSGIngress5000:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref rWebAppSecurityGroup
+      IpProtocol: tcp
+      ToPort: '5000'
+      FromPort: '5000'
+      SourceSecurityGroupId: !Ref rBastionSecurityGroup
+  rDBSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: Web Security Group
+      VpcId: !Ref rNewVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: '-1'
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: DB_SecurityGroup
+  rSelfAssignedBastionDBSGIngress3306:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref rDBSecurityGroup
+      IpProtocol: tcp
+      ToPort: '3306'
+      FromPort: '3306'
+      SourceSecurityGroupId: !Ref rBastionSecurityGroup
+  rSelfAssignedAppDBSGIngress3306:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref rDBSecurityGroup
+      IpProtocol: tcp
+      ToPort: '3306'
+      FromPort: '3306'
+      SourceSecurityGroupId: !Ref rWebAppSecurityGroup
+Outputs:
+  oStackVPC:
+    Description: The ID of the VPC
+    Value: !Ref rNewVPC
+    Export:
+      Name: !Sub '${AWS::StackName}-VPCID'
+  oPublicSubnetA:
+    Description: The ID of the Public Subnet in AZ1
+    Value: !Ref rPublicSubnetA
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnetAId'
+  oPublicSubnetB:
+    Description: The ID of the Public Subnet in AZ2
+    Value: !Ref rPublicSubnetB
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnetBId'
+  oPublicSubnetC:
+    Description: The ID of the Public Subnet in AZ3
+    Value: !Ref rPublicSubnetC
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnetCId'      
+  oNatSubnetA:
+    Description: The ID of the NAT Subnet in AZ1
+    Value: !Ref rNatSubnetA
+    Export:
+      Name: !Sub '${AWS::StackName}-NatSubnetAId'
+  oNatSubnetB:
+    Description: The ID of the NAT Subnet in AZ2
+    Value: !Ref rNatSubnetB
+    Export:
+      Name: !Sub '${AWS::StackName}-NatSubnetBId'
+  oNatSubnetC:
+    Description: The ID of the NAT Subnet in AZ3
+    Value: !Ref rNatSubnetC
+    Export:
+      Name: !Sub '${AWS::StackName}-NatSubnetCId'      
+  oALBSecurityGroup:
+    Description: The ID of the ALBSecurityGroup
+    Value: !GetAtt 
+      - rALBSecurityGroup
+      - GroupId
+    Export:
+      Name: !Sub '${AWS::StackName}-ALBSecurityGroupId'
+  oBastionSecurityGroup:
+    Description: The ID of the rBastionSecurityGroup
+    Value: !GetAtt 
+      - rBastionSecurityGroup
+      - GroupId
+    Export:
+      Name: !Sub '${AWS::StackName}-BastionSecurityGroup'
+  oWebAppSecurityGroup:
+    Description: The ID of the WebAppSecurityGroup
+    Value: !GetAtt 
+      - rWebAppSecurityGroup
+      - GroupId
+    Export:
+      Name: !Sub '${AWS::StackName}-WebAppSecurityGroup'
+  oDBSecurityGroup:
+    Description: The ID of the DBSecurityGroup
+    Value: !GetAtt 
+      - rDBSecurityGroup
+      - GroupId
+    Export:
+      Name: !Sub '${AWS::StackName}-DBSecurityGroup'
+  oNatRouteTable:
+    Description: The ID of the NatRouteTable
+    Value: !Ref rNatRouteTable
+    Export:
+      Name: !Sub '${AWS::StackName}-NatRouteTable'
+  oPrivateRouteTable:
+    Description: The ID of the NatRouteTable
+    Value: !Ref rPrivateRouteTable
+    Export:
+      Name: !Sub '${AWS::StackName}-PrivateRouteTable'
+  oNatSubnetAAZ:
+    Description: The ID of NatSubnetA AZ
+    Value: !GetAtt 
+      - rNatSubnetA
+      - AvailabilityZone
+    Export:
+      Name: !Sub '${AWS::StackName}-NatSubnetAAvailabilityZone'
+  oNatSubnetBAZ:
+    Description: The ID of NatSubnetB AZ
+    Value: !GetAtt 
+      - rNatSubnetB
+      - AvailabilityZone
+    Export:
+      Name: !Sub '${AWS::StackName}-NatSubnetBAvailabilityZone'
+  oNatSubnetCAZ:
+    Description: The ID of NatSubnetC AZ
+    Value: !GetAtt 
+      - rNatSubnetC
+      - AvailabilityZone
+    Export:
+      Name: !Sub '${AWS::StackName}-NatSubnetCAvailabilityZone'      
+  oPublicSubnetAAZ:
+    Description: The ID of PublicSubnetA AZ
+    Value: !GetAtt 
+      - rPublicSubnetA
+      - AvailabilityZone
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnetAAvailabilityZone'
+  oPublicSubnetBAZ:
+    Description: The ID of PublicSubnetB AZ
+    Value: !GetAtt 
+      - rPublicSubnetB
+      - AvailabilityZone
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnetBAvailabilityZone'
+  oPublicSubnetCAZ:
+    Description: The ID of PublicSubnetC AZ
+    Value: !GetAtt 
+      - rPublicSubnetC
+      - AvailabilityZone
+    Export:
+      Name: !Sub '${AWS::StackName}-PublicSubnetCAvailabilityZone'      
+  oEnvironmentName:
+    Description: The Environment Name
+    Value: !Ref pEnvironmentName
+    Export:
+      Name: !Sub '${AWS::StackName}-EnvironmentName'
