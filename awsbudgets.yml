@@ -1,0 +1,185 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Automate AWS Budgets"
+Parameters:
+  Currency:
+    Description: The currency of your budget
+    Type: String
+    Default: USD
+  BudgetLimit:
+    Description: Numeric form of budget limit for the evaluated time period.In USD.
+    Type: Number
+    Default: 150
+  LinkedAccountBudgetLimit:
+    Description: Maximum Budget in USD
+    Type: Number
+    Default: 150
+  AthenaBudgetLimit:
+    Description: Numeric form of budget limit for a specifc service (Amazon SageMaker in this case) for the evaluated time period
+    Type: Number
+    Default: 120
+  EC2BudgetLimit:
+    Description: Numeric form of budget limit for a specifc service (Amazon EC2 in this case) for the evaluated time period
+    Type: Number
+    Default: 150
+  Threshold01:
+    Description: Number(Percentage) between 0 and 100 representing the next percentage of the BudgetLimit in which people get notified. 
+    Type: Number
+    Default: 80
+  Threshold02:
+    Description: Number(Percentage) between 0 and 100 representing the next percentage of the BudgetLimit in which people get notified
+    Type: Number
+    Default: 85
+  EMail01:
+    Description: The email address where notifications are sent
+    Type: String
+    Default: skangnoh@amazon.com
+  LinkedAccountNumbers:
+    Description: The AWS account ID is a 12-digit number, such as 123456789012. This parameter is a comma-delimited list of linked AWS account ids if running from a master account.
+    Type: List<Number>   
+    Default: "754674761669, 639694136535, 334243351861, 427730817660 "
+  LinkedAccountsBoolean: 
+    Description: Environment type.
+    Default: y
+    Type: String
+    AllowedValues: 
+      - y
+      - n
+    ConstraintDescription: must specify y or n.
+Conditions: 
+  FilterLinkedAccounts: !Equals [ !Ref LinkedAccountsBoolean, y ]
+
+Resources:
+  BudgetThresholdSNS:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${AWS::StackName}-BudgetThreshold
+      Subscription:
+        - Endpoint: !Sub ${EMail01}
+          Protocol: email
+  MySnsTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Id: MyTopicPolicy
+        Version: 2012-10-17
+        Statement:
+          - Sid: My-statement-id
+            Effect: Allow
+            Principal:
+              Service:
+                - budgets.amazonaws.com
+            Action: sns:publish
+            Resource: !Sub ${BudgetThresholdSNS}
+      Topics:
+        - !Ref BudgetThresholdSNS 
+  TotalMonthlyBudget:
+    Type: "AWS::Budgets::Budget"
+    Properties:
+      Budget:
+        BudgetLimit:
+          Amount: !Sub ${BudgetLimit}
+          Unit: !Sub ${Currency}
+        TimeUnit: MONTHLY
+        BudgetType: COST
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: !Sub ${Threshold02}
+          Subscribers:
+          - SubscriptionType: SNS
+            Address: !Sub ${BudgetThresholdSNS}
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: !Sub ${Threshold01}
+          Subscribers:
+          - SubscriptionType: SNS
+            Address: !Sub ${BudgetThresholdSNS}
+  AthenaMonthlyBudget:
+    Type: "AWS::Budgets::Budget"
+    Properties:
+      Budget:
+        BudgetLimit:
+          Amount: !Sub ${AthenaBudgetLimit}
+          Unit: !Sub ${Currency}
+        TimeUnit: MONTHLY
+        BudgetType: COST
+        CostFilters:
+          Service:
+          - Amazon Athena
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: !Sub ${Threshold02}
+          Subscribers:
+          - SubscriptionType: SNS
+            Address: !Sub ${BudgetThresholdSNS}}
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: !Sub ${Threshold01}
+          Subscribers:
+          - SubscriptionType: SNS
+            Address: !Sub ${BudgetThresholdSNS}}
+
+  EC2MonthlyBudget:
+    Type: "AWS::Budgets::Budget"
+    Properties:
+      Budget:
+        BudgetLimit:
+          Amount: !Sub ${EC2BudgetLimit}
+          Unit: !Sub ${Currency}
+        TimeUnit: MONTHLY
+        BudgetType: COST
+        CostFilters:
+          Service:
+          - Amazon Elastic Compute Cloud - Compute
+
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: !Sub ${Threshold02}
+          Subscribers:
+          - SubscriptionType: SNS
+            Address: !Sub ${BudgetThresholdSNS}}
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: !Sub ${Threshold01}
+          Subscribers:
+          - SubscriptionType: SNS
+            Address: !Sub ${BudgetThresholdSNS}}
+  LinkedAccountsMonthlyBudget:
+    Type: "AWS::Budgets::Budget"
+    Condition: FilterLinkedAccounts
+    Properties:
+      Budget:
+        BudgetLimit:
+          Amount: !Sub ${LinkedAccountBudgetLimit}
+          Unit: !Sub ${Currency}
+        TimeUnit: MONTHLY
+        BudgetType: COST
+        CostFilters:
+          LinkedAccount: !Ref LinkedAccountNumbers
+      NotificationsWithSubscribers:
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: !Sub ${Threshold02}
+          Subscribers:
+          - SubscriptionType: SNS
+            Address: !Sub ${BudgetThresholdSNS}}
+        - Notification:
+            NotificationType: ACTUAL
+            ComparisonOperator: GREATER_THAN
+            Threshold: !Sub ${Threshold01}
+          Subscribers:
+          - SubscriptionType: SNS
+            Address: !Sub ${BudgetThresholdSNS}}
+
+Outputs:
+  BudgetId:
+    Value: !Ref TotalMonthlyBudget
